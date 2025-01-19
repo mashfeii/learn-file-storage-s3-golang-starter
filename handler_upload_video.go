@@ -77,6 +77,19 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	fastStartURL, err := pkg.ProcessVideoFastStart(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to speed up video", err)
+		return
+	}
+
+	processedFile, err := os.Open(fastStartURL)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error on processing", err)
+		return
+	}
+	defer processedFile.Close()
+
 	_, _ = tempFile.Seek(0, io.SeekStart)
 
 	randomStringKey := URLPrefix + "/" + pkg.Random32ByteString() + ".mp4"
@@ -84,7 +97,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
 		Key:         &randomStringKey,
-		Body:        tempFile,
+		Body:        processedFile,
 		ContentType: &mediaType,
 	})
 	if err != nil {
