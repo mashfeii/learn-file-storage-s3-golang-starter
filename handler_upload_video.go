@@ -71,9 +71,15 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Unable to transfer video file", err)
 	}
 
+	URLPrefix, err := pkg.GetVideoAspectRatio(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to get video aspect ratio", err)
+		return
+	}
+
 	_, _ = tempFile.Seek(0, io.SeekStart)
 
-	randomStringKey := pkg.Random32ByteString() + ".mp4"
+	randomStringKey := URLPrefix + "/" + pkg.Random32ByteString() + ".mp4"
 
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
